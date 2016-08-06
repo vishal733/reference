@@ -1,0 +1,78 @@
+GstClock: 
+- Monotonic rate of increase.
+- Gives absolute time
+gst_clock_get_time()
+gst_clock_id_wait() - Wait until this time..
+
+
+gst maintains RunningTime [time since pipe started]
+- first buffer PTS might not be 0.
+
+a reference required (from which to calculate the running time of each buffer)
+
+Segment
+PTS - segment.start => buffer running time
+
+====================
+In case of pause?
+====================
+Runningtime: amount of time we spend in playing
+Ned to update base_time.
+PLAYING=>PAUSED: remember running_time
+PAUSED=>PLAYING: base_time = current_absolute_time - running_time
+
+Playing faster/slower
+- Use segment rate property
+running_time = (B.PTS - S.start)/ABS(S.rate)
+
+Playing backwards:
+- Segment.rate < 0.0
+(S.stop - B.PTS)/ABS(S.rate)
+
+
+Stream Time: [what goes to seek bar]
+- User-facing time
+- Same as running when pts starts from 0.
+
+
+=================
+Questions
+=================
+How is EOS passed in a small pipe with mux?
+(1) Normal data flow
+(2) EOS handling
+
+
+=================
+Task Creation
+=================
+gst_task_new for defining the task
+
+a task can be in three states:
+STOPPED,
+PAUSED,
+STARTED
+
+gstbasesrc, gstbasesink, queue, queue2, multiqueue, gsttypefindelement, gstbaseparse, gstdownloadbuffer, 
+gst_queue_handle_src_event (RECONFIGURE) -> gst_pad_start_task (pad, (GstTaskFunction) gst_queue_loop) -> gst_task_new  
+gst_queue_handle_sink_event (FLUSH_STOP) -> gst_pad_start_task (pad, (GstTaskFunction) gst_queue_loop) -> 
+gst_queue_src_activate_mode (in GST_PAD_MODE_PUSH) ->  gst_pad_start_task (pad, (GstTaskFunction) gst_queue_loop) -> 
+
+==================================
+List of errors
+==================================
+srcaud10: Disconnected: Connection terminated
+
+==========================================================================================================================================
+Blocked thread
+==========================================================================================================================================
+Thread 58 (Thread 0x7f3b6efdc700 (LWP 4181)):
+#0  __lll_lock_wait () at ../sysdeps/unix/sysv/linux/x86_64/lowlevellock.S:135
+#1  0x00007f3bdff9cd82 in __GI___pthread_mutex_lock (mutex=0xb7f2a0) at ../nptl/pthread_mutex_lock.c:115
+#2  0x00007f3be0d335a0 in gst_pad_send_event_unchecked (pad=0xb0ccd0, event=0xba4c10, type=GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM) at gstpad.c:5103
+#3  0x00007f3be0d3cbd9 in gst_pad_send_event (pad=0xb0ccd0, event=0xba4c10) at gstpad.c:5292
+#4  0x000000000040a2c1 in push_eos_thread (user_data=<optimized out>) at moduleActDump.cpp:22
+#5  0x00007f3be07dd955 in ?? () from /lib/x86_64-linux-gnu/libglib-2.0.so.0
+#6  0x00007f3bdff9a6aa in start_thread (arg=0x7f3b6efdc700) at pthread_create.c:333
+#7  0x00007f3bdf589eed in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:109
+

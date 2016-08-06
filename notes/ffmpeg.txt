@@ -1,0 +1,190 @@
+End-to-end platform on device side with placeholders for including algorithms.
+
+Algorithms are of two types:
+- real-time. (score generation)
+- non real-time. (zooming use-case)
+
+Record events. Maintain timestamps to be used later on.
+Extract using algorithms later on.
+
+
+====================
+Tasks
+====================
+(1) Write out 30 minute clips. Generate random time scores, and store in a DB
+(2) Write another C++ which extracts the clips based upon scores. Also, create some timelapse.
+(3) 
+
+
+
+
+Clip selection based upon scores.. [Can this be done while recording is ongoing]
+
+Resumable recording:
+
+splitting: process while recording is ongoing.
+When to do splitting?
+At app level, need an indication that processing is still ongoing.
+
+Post-processing: 
+
+
+
+
+ffmpeg -ss 00:00:03.540 -t 1 -i 01.mp4 -f mjpeg frame1640.jpg
+
+gst-launch-1.0 v4l2src ! video/x-h264, width=1280, height=720 ! h264parse ! queue ! splitmuxsink name=sink location=file_%03d.mp4 max-size-time=5000000000 -e
+gst-launch-1.0 splitmuxsrc location=file_*.mp4 name=src src.video_0 ! avdec_h264 ! videoconvert ! xvimagesink sync=true async=false -v 
+
+gst-launch-1.0 v4l2src ! video/x-h264, width=1280, height=720 ! h264parse ! queue ! splitmuxsink name=sink location=out/file2_%03d.mp4 max-size-time=5000000000 pulsesrc device=alsa_input.usb-046d_HD_Pro_Webcam_C920_AFA9956F-02-C920.analog-stereo ! queue ! voaacenc ! queue ! sink.audio_0 -e
+gst-launch-1.0 splitmuxsrc location=out/file_*.mp4 name=src src.video_0 ! avdec_h264 ! videoconvert ! xvimagesink sync=true async=false -v
+
+gst-launch-1.0 v4l2src ! video/x-h264, width=1280, height=720 ! h264parse ! queue ! splitmuxsink name=sink location=out/file2_%03d.mp4 max-size-time=5000000000 pulsesrc device=alsa_input.usb-046d_HD_Pro_Webcam_C920_AFA9956F-02-C920.analog-stereo ! queue ! voaacenc ! queue ! sink.audio_0 -e
+
+Only audio:
+gst-launch-1.0 mp4mux name=sink ! filesink location=out/file2.mp4 pulsesrc device=alsa_input.usb-046d_HD_Pro_Webcam_C920_AFA9956F-02-C920.analog-stereo ! queue ! voaacenc ! queue ! sink.audio_0 -e
+
+Fakesink:
+gst-launch-1.0 v4l2src ! video/x-h264, width=1280, height=720 ! h264parse ! queue ! mp4mux name=sink ! filesink location=out/file2.mp4 pulsesrc device=alsa_input.usb-046d_HD_Pro_Webcam_C920_AFA9956F-02-C920.analog-stereo ! queue ! voaacenc ! queue ! sink.audio_0 -e
+
+====================================================================================
+POSSIBLE CHANGES:
+====================================================================================
+- Add a queue immediately after aud src, and vidsrc
+- Require to stream data to phone in a playable format
+
+
+====================================================================================
+STEPS:
+====================================================================================
+Step-by-step
+(1) What is audio buffer size?
+
+-----------------------------------------------------------------------------------------------------------------------------
+- 10 milli-seconds (gst-launch-1.0 pulsesrc device=alsa_input.pci-0000_00_1b.0.analog-stereo! fakesink silent=false -v)
+-----------------------------------------------------------------------------------------------------------------------------
+/GstPipeline:pipeline0/GstPulseSrc:pulsesrc0: source-output-index = 11
+/GstPipeline:pipeline0/GstPulseSrc:pulsesrc0: actual-buffer-time = 200000
+/GstPipeline:pipeline0/GstPulseSrc:pulsesrc0: actual-latency-time = 10000
+/GstPipeline:pipeline0/GstPulseSrc:pulsesrc0.GstPad:src: caps = "audio/x-raw\,\ format\=\(string\)S16LE\,\ layout\=\(string\)interleaved\,\ rate\=\(int\)44100\,\ channels\=\(int\)2\,\ channel-mask\=\(bitmask\)0x0000000000000003"
+New clock: GstPulseSrcClock
+/GstPipeline:pipeline0/GstPulseSrc:pulsesrc0: volume = 1
+/GstPipeline:pipeline0/GstPulseSrc:pulsesrc0: mute = false
+/GstPipeline:pipeline0/GstPulseSrc:pulsesrc0: current-device = alsa_input.pci-0000_00_1b.0.analog-stereo
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+- 100 milli-seconds? (gst-launch-1.0 pulsesrc device=alsa_input.usb-046d_HD_Pro_Webcam_C920_AFA9956F-02-C920.analog-stereo ! fakesink silent=false -v)
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+/GstPipeline:pipeline0/GstPulseSrc:pulsesrc0: source-output-index = 13
+New clock: GstPulseSrcClock
+/GstPipeline:pipeline0/GstPulseSrc:pulsesrc0: actual-buffer-time = 199863
+/GstPipeline:pipeline0/GstPulseSrc:pulsesrc0: actual-latency-time = 99931
+/GstPipeline:pipeline0/GstPulseSrc:pulsesrc0.GstPad:src: caps = "audio/x-raw\,\ format\=\(string\)S16LE\,\ layout\=\(string\)interleaved\,\ rate\=\(int\)44100\,\ channels\=\(int\)2\,\ channel-mask\=\(bitmask\)0x0000000000000003"
+/GstPipeline:pipeline0/GstPulseSrc:pulsesrc0: volume = 1
+/GstPipeline:pipeline0/GstPulseSrc:pulsesrc0: mute = false
+/GstPipeline:pipeline0/GstPulseSrc:pulsesrc0: current-device = alsa_input.usb-046d_HD_Pro_Webcam_C920_AFA9956F-02-C920.analog-stereo
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+- 23 milli-seconds ? (How is it there in recorded videos?)
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+(1) 
+
+(2) Is it possible to change aud buffer size with current code
+Yes. But not lower than default-latency-time.
+Setting it to lower than default-latency-time, both latency-time and buffer-time are to be set. But I can't listen to audio. So the audio might not even be valid..
+
+
+(3) How does recorded video have a buffer size of 23 ms?
+- Coz of mp3 encoding?
+
+(4) Is audio buffer size the actual reason?
+
+
+====================================================================================
+
+gst-launch-1.0 uvch264src device=/dev/video0 auto-start=true name=src src.vidsrc ! video/x-h264,width=1280,height=720 ! h264parse ! queue ! mp4mux ! filesink location=trial_30.mp4  src.vfsrc ! image/jpeg,width=640,height=360 ! queue ! fakesink -e
+
+
+gst-launch-1.0 v4l2src device=/dev/video0 ! video/x-h264,width=1280,height=720 ! h264parse ! queue ! mp4mux ! filesink location=trial_30.mp4  
+gst-launch-1.0 v4l2src device=/dev/video0 ! video/x-h264,width=1280,height=720 ! h264parse ! mp4mux presentation-time=false ! filesink location=trial_304.mp4 -e
+
+gst-launch-1.0 filesrc location=out.mp4 ! qtdemux name=src src.video_0 ! fakesink silent=false -v 
+
+Record long clips, timelapses, and short clips.
+Everything should be processed from the long clips themselves.
+
+Clips of 1 minute each. Create a server which serves those videos.
+The idea of grouping clips.
+- 1 minute clips. Assigning markable timestamps to it.
+Generate timestamps on clips.
+Store it in a usable format in db.
+- record ON/OFF. Full recorded video
+- schedule ON/OFF
+- generate timelapse
+- clips [generate clips]
+- Audio in live streaming
+Proper timestamp sync between jpeg/h.264 [MOST IMP.]
+- JPEG signals the start frame.
+- h.264 signals back the length of 
+
+============
+STEPS:
+============
+- Get start/end activity time-stamps
+- Figure out it's position in dumped video frames
+- Save it somewhere [like a DB]
+- Signal start of recording from jpeg
+- Show clips from the larger video file itself, without splitting?
+- Handling h.264 primary frame boundaries.
+- Timelapse could be without audio?
+- Ability to interact back with the timelapse, and create 
+- vid_1, vid_2, vid_3, being able to extract time-stamps out of it.
+- Handling lost frames, if any!
+- Test step-by-step in embedded system (i.e. when there can be slower processing speed)
+
+(-1) Run C++ from within Python. And figure out signalling mechanism
+(0) Introducing multiple build profiles in Makefile.am
+(0.5) Automatically detecting the correct audio input device
+(1) Dump multiple videos. Extract clips based upon time-stamps.
+(2) Generate time-stamps in JPEG.
+(3) Relate it with the dumped video.
+
+Software modes:
+(1) Stream only is default. This is always the case. 
+(2) Record ON/OFF triggers.
+
+(1) Set-up a recording ID
+Mark time-stamps in the dumped video. And retreive it precisely.
+- Getting and saving time-stamps.
+
+KEEP IT REALLY SIMPLE
+STEPS:
+(1) Have it pre-divided into 10-12 second segments.
+
+Add meta-data to frame marking beginning of a new boundary. Write out to a DB file....
+(1) Put begin markers on frames [JPEG/H.264 are separate in this case]
+
+- Device out a strategy based upon frame number.
+
+
+===========================
+STEPS:
+===========================
+(1) Dumping full video + clipping boundaries.
+(i) Dump it man!
+(ii) Create a clip file
+(iii) Render the long recorded video 
+
+(2) Clipping.
+  (i) ffmpeg
+  (ii) ges-launch-1.0
+  (iii) do not create a separate clip file. Play from the bigger video file [Not required]
+
+(3) Final display on mobile app.
+  (i) Render it on the local webpage. [Especially for recorded videos]
+  (ii) Play it directly in the app.
+
+
+

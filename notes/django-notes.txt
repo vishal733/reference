@@ -1,0 +1,29 @@
+sudo apt-get install python-setuptools
+sudo easy_install virtualenv
+virtualenv --no-site-packages django-vish
+
+source django-vish/bin/activate
+
+cd django-vish
+easy_install Django
+
+django-admin startproject django_test
+
+python manage.py check;		# checks for any problems in your project without making migrations or touching the database
+pyth
+python manage.py shell
+
+#superuser creation
+python manage.py createsuperuser
+
+====================
+Databases
+====================
+python manage.py syncdb
+python manage.py sql polls	# Lists the sql entries (works only in 1.6?)
+
+# After changing models.py, run the below:
+python manage.py makemigrations polls
+python manage.py migrate
+
+
